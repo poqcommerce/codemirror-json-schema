@@ -49,7 +49,5 @@ export const PRIMITIVE_TYPES = [
 export const COMPLEX_TYPES = [TOKENS.OBJECT, TOKENS.ARRAY, TOKENS.ITEM];
 
 export const MODES = {
-  JSON5: "json5",
   JSON: "json4",
-  YAML: "yaml",
 } as const;

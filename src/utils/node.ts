@@ -67,10 +67,7 @@ export const isPropertyNameNode = (node: SyntaxNode, mode: JSONMode) => {
     (resolveTokenName(node.name, mode) === TOKENS.INVALID &&
       (resolveTokenName(node.prevSibling?.name ?? "", mode) ===
         TOKENS.PROPERTY ||
-        resolveTokenName(node.prevSibling?.name ?? "", mode) === "{")) ||
-    // TODO: Can we make this work without checking for the mode?
-    (mode === MODES.YAML &&
-      resolveTokenName(node.parent?.name ?? "", mode) === TOKENS.OBJECT)
+        resolveTokenName(node.prevSibling?.name ?? "", mode) === "{"))
   );
 };
 

@@ -3,10 +3,8 @@ import { EditorState, Text } from "@codemirror/state";
 import { SyntaxNode, SyntaxNodeRef } from "@lezer/common";
 import { JSONMode, JSONPointersMap, Side } from "../types";
 import {
-  JSON5_TOKENS_MAPPING,
   MODES,
   TOKENS,
-  YAML_TOKENS_MAPPING,
 } from "../constants";
 import {
   findNodeIndexInArrayNode,
@@ -16,14 +14,7 @@ import {
 } from "./node";
 
 export const resolveTokenName = (nodeName: string, mode: JSONMode) => {
-  switch (mode) {
-    case MODES.YAML:
-      return YAML_TOKENS_MAPPING[nodeName] ?? nodeName;
-    case MODES.JSON5:
-      return JSON5_TOKENS_MAPPING[nodeName] ?? nodeName;
-    default:
-      return nodeName;
-  }
+  return nodeName;
 };
 
 // adapted from https://discuss.codemirror.net/t/json-pointer-at-cursor-seeking-implementation-critique/4793/3

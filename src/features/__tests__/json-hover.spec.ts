@@ -73,37 +73,7 @@ describe("JSONHover#getDataForCursor", () => {
           type: "string",
         },
       },
-    },
-    {
-      mode: MODES.JSON5,
-      doc: "{object: { foo: true }, bar: 123}",
-      pos: 11,
-      schema: testSchema2,
-      expected: {
-        pointer: "/object/foo",
-        schema: {
-          description: "an elegant string",
-          type: "string",
-        },
-      },
-    },
-    {
-      mode: MODES.YAML,
-      doc: `---
-object:
-  foo: true
-bar: 123
-`,
-      pos: 14,
-      schema: testSchema2,
-      expected: {
-        pointer: "/object/foo",
-        schema: {
-          description: "an elegant string",
-          type: "string",
-        },
-      },
-    },
+    }
   ])(
     "should return schema descriptions as expected (mode: $mode)",
     ({ mode, doc, pos, schema, expected }) => {

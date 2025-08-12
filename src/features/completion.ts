@@ -493,17 +493,7 @@ export class JSONCompletion {
               value = this.getInsertTextForString("");
               break;
             case "object":
-              switch (this.mode) {
-                case MODES.JSON5:
-                  value = "{#{}}";
-                  break;
-                case MODES.YAML:
-                  value = "#{}";
-                  break;
-                default:
-                  value = "{#{}}";
-                  break;
-              }
+              value = "{#{}}";
               break;
             case "array":
               value = "[#{}]";
@@ -539,31 +529,11 @@ export class JSONCompletion {
   }
 
   private getInsertTextForPropertyName(key: string, rawWord: string) {
-    switch (this.mode) {
-      case MODES.JSON5:
-      case MODES.YAML: {
-        if (rawWord.startsWith('"')) {
-          return `"${key}"`;
-        }
-        if (rawWord.startsWith("'")) {
-          return `'${key}'`;
-        }
-        return key;
-      }
-      default:
-        return `"${key}"`;
-    }
+    return `"${key}"`;
   }
 
   private getInsertTextForString(value: string, prf = "#") {
-    switch (this.mode) {
-      case MODES.JSON5:
-        return `'${prf}{${value}}'`;
-      case MODES.YAML:
-        return `${prf}{${value}}`;
-      default:
-        return `"${prf}{${value}}"`;
-    }
+    return `"${prf}{${value}}"`;
   }
 
   // TODO: Is this actually working?
@@ -937,14 +907,6 @@ export class JSONCompletion {
       pointer,
       data: documentData ?? undefined,
     });
-    if (
-      !pointerPointsToKnownProperty &&
-      subSchema?.type === "null" &&
-      this.mode === "yaml"
-    ) {
-      // TODO describe YAML special-case where null is given the value and json-schema-library simply makes up a new schema based on that null value for whatever reason
-      subSchema = undefined;
-    }
 
     debug.log(
       "xxxx",
@@ -1012,23 +974,11 @@ export class JSONCompletion {
 
   private getAppliedValue(value: any): { label: string; apply: string } {
     const stripped = stripSurroundingQuotes(JSON.stringify(value));
-    switch (this.mode) {
-      case MODES.JSON5:
-        return {
-          label: stripped,
-          apply: surroundingDoubleQuotesToSingle(JSON.stringify(value)),
-        };
-      case MODES.YAML:
-        return {
-          label: stripped,
-          apply: stripped,
-        };
-      default:
-        return {
-          label: stripped,
-          apply: JSON.stringify(value),
-        };
-    }
+
+    return {
+      label: stripped,
+      apply: JSON.stringify(value),
+    };
   }
 
   private getValueFromLabel(value: any): string {
