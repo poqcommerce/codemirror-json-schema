@@ -1,0 +1,17 @@
+import { SyntaxNode } from "@lezer/common";
+import { EditorState, Text } from "@codemirror/state";
+import { JSONMode, Side } from "../types";
+export declare const getNodeAtPosition: (state: EditorState, pos: number, side?: Side) => SyntaxNode;
+export declare const stripSurroundingQuotes: (str: string) => string;
+export declare const surroundingDoubleQuotesToSingle: (str: string) => string;
+export declare const getWord: (doc: Text, node: SyntaxNode | null, stripQuotes?: boolean, onlyEvenQuotes?: boolean) => string;
+export declare const isInvalidValueNode: (node: SyntaxNode, mode: JSONMode) => boolean;
+export declare const isPrimitiveValueNode: (node: SyntaxNode, mode: JSONMode) => boolean;
+export declare const isValueNode: (node: SyntaxNode, mode: JSONMode) => boolean;
+export declare const isPropertyNameNode: (node: SyntaxNode, mode: JSONMode) => boolean;
+export declare const getChildrenNodes: (node: SyntaxNode) => SyntaxNode[];
+export declare const getMatchingChildrenNodes: (node: SyntaxNode, nodeName: string, mode: JSONMode) => SyntaxNode[];
+export declare const getMatchingChildNode: (node: SyntaxNode, nodeName: string, mode: JSONMode) => SyntaxNode | null;
+export declare const getChildValueNode: (node: SyntaxNode, mode: JSONMode) => SyntaxNode | undefined;
+export declare const findNodeIndexInArrayNode: (arrayNode: SyntaxNode, valueNode: SyntaxNode, mode: JSONMode) => number;
+export declare const getClosestNode: (node: SyntaxNode, nodeName: string, mode: JSONMode, depth?: number) => SyntaxNode | null;
