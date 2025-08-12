@@ -8,7 +8,6 @@
     "codemirror6",
     "jsonschema",
     "jsonschema-validation",
-    "json5",
     "json",
     "editor"
   ],
@@ -28,28 +27,13 @@
       "types": "./dist/index.d.ts",
       "require": "./cjs/index.js",
       "default": "./cjs/index.js"
-    },
-    "./json5": {
-      "import": "./dist/json5/index.js",
-      "types": "./dist/json5/index.d.ts",
-      "require": "./cjs/json5/index.js",
-      "default": "./cjs/json5/index.js"
-    },
-    "./yaml": {
-      "import": "./dist/yaml/index.js",
-      "types": "./dist/yaml/index.d.ts",
-      "require": "./cjs/yaml/index.js",
-      "default": "./cjs/yaml/index.js"
     }
   },
   "repository": "github:acao/codemirror-json-schema",
   "homepage": "https://codemirror-json-schema.netlify.app/",
   "optionalDependencies": {
     "@codemirror/autocomplete": "^6.16.2",
-    "@codemirror/lang-json": "^6.0.1",
-    "@codemirror/lang-yaml": "^6.1.1",
-    "codemirror-json5": "^1.0.3",
-    "json5": "^2.2.3"
+    "@codemirror/lang-json": "^6.0.1"
   },
   "peerDependencies": {
     "@codemirror/language": "^6.10.2",
@@ -87,13 +71,11 @@
   },
   "dependencies": {
     "@sagold/json-pointer": "^5.1.1",
-    "@shikijs/markdown-it": "^1.22.2",
     "best-effort-json-parser": "^1.1.2",
     "json-schema": "^0.4.0",
     "json-schema-library": "^9.3.5",
     "loglevel": "^1.9.1",
-    "markdown-it": "^14.1.0",
-    "shiki": "^1.22.2"
+    "markdown-it": "^14.1.0"
   },
   "scripts": {
     "dev": "vite ./dev --port 3000",
