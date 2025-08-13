@@ -1,4 +1,4 @@
-const md = require("markdown-it");
+import md from 'markdown-it';
 
 const renderer = md({
   linkify: true,
