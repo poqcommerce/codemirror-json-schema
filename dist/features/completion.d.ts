@@ -21,6 +21,11 @@ export declare class JSONCompletion {
     private parser;
     private constantDescriptions;
     constructor(opts: JSONCompletionOptions);
+    /**
+     * Iteratively collects constant descriptions from allOf sections in the schema.
+     * This helps populate enum descriptions based on conditional schemas.
+     */
+    private collectConstantDescriptions;
     doComplete(ctx: CompletionContext): never[] | CompletionResult;
     private doCompleteForSchema;
     private applySnippetCompletion;

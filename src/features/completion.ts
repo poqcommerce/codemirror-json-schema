@@ -92,6 +92,110 @@ export class JSONCompletion {
     this.parser = this.opts?.jsonParser ?? getDefaultParser(this.mode);
   }
 
+  /**
+   * Iteratively collects constant descriptions from allOf sections in the schema.
+   * This helps populate enum descriptions based on conditional schemas.
+   */
+  private collectConstantDescriptions(schema: JSONSchema7) {
+    this.constantDescriptions.clear();
+
+    const stack: JSONSchema7[] = [schema];
+    const visited = new Set<JSONSchema7>();
+
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (!current || typeof current !== "object" || visited.has(current)) {
+        continue;
+      }
+      visited.add(current);
+
+      // Check allOf array
+      if (Array.isArray(current.allOf)) {
+        for (const allOfSchema of current.allOf) {
+          if (typeof allOfSchema !== "object") continue;
+
+          // Add to stack for further processing
+          stack.push(allOfSchema);
+
+          // Check if.properties for constants
+          if (
+            typeof allOfSchema.if === "object" &&
+            allOfSchema.if != null &&
+            allOfSchema.if.properties != null
+          ) {
+            const propertyEntries = Object.values(
+              allOfSchema.if.properties,
+            ) as JSONSchema7[];
+
+            for (const value of propertyEntries) {
+              if (
+                typeof value === "object" &&
+                value.const &&
+                value.description
+              ) {
+                this.constantDescriptions.set(
+                  value.const.toString(),
+                  value.description,
+                );
+              }
+            }
+          }
+        }
+      }
+
+      // Also check anyOf and oneOf for completeness
+      if (Array.isArray(current.anyOf)) {
+        for (const anyOfSchema of current.anyOf) {
+          if (typeof anyOfSchema === "object") {
+            stack.push(anyOfSchema);
+          }
+        }
+      }
+
+      if (Array.isArray(current.oneOf)) {
+        for (const oneOfSchema of current.oneOf) {
+          if (typeof oneOfSchema === "object") {
+            stack.push(oneOfSchema);
+          }
+        }
+      }
+
+      // Check properties for nested schemas
+      if (current.properties && typeof current.properties === "object") {
+        for (const propSchema of Object.values(current.properties)) {
+          if (typeof propSchema === "object") {
+            stack.push(propSchema);
+          }
+        }
+      }
+
+      // Check items for array schemas
+      if (current.items) {
+        if (
+          typeof current.items === "object" &&
+          !Array.isArray(current.items)
+        ) {
+          stack.push(current.items);
+        } else if (Array.isArray(current.items)) {
+          for (const itemSchema of current.items) {
+            if (typeof itemSchema === "object") {
+              stack.push(itemSchema);
+            }
+          }
+        }
+      }
+
+      // Check definitions
+      if (current.definitions && typeof current.definitions === "object") {
+        for (const defSchema of Object.values(current.definitions)) {
+          if (typeof defSchema === "object") {
+            stack.push(defSchema);
+          }
+        }
+      }
+    }
+  }
+
   public doComplete(ctx: CompletionContext) {
     const schemaFromState = getJSONSchema(ctx.state)!;
     if (this.originalSchema !== schemaFromState) {
@@ -100,29 +204,8 @@ export class JSONCompletion {
         expandSchemaProperty(schemaFromState, schemaFromState) ??
         schemaFromState;
       this.laxSchema = makeSchemaLax(this.schema);
-
-      this.constantDescriptions.clear();
-
-      this.schema.allOf?.forEach((subSchema) => {
-        if (typeof subSchema === 'boolean') return;
-
-        if (
-          typeof subSchema.if === "object" &&
-          subSchema.if != null &&
-          subSchema.if?.properties != null
-        ) {
-          const propertyEntries = Object.values(subSchema.if.properties);
-
-          for (const value of propertyEntries) {
-            if (typeof value === "object" && value.const && value.description) {
-              this.constantDescriptions.set(
-                value.const.toString(),
-                value.description,
-              );
-            }
-          }
-        }
-      });
+      // Collect constant descriptions when schema changes
+      this.collectConstantDescriptions(this.schema);
     }
     if (!this.schema || !this.laxSchema) {
       // todo: should we even do anything without schema
