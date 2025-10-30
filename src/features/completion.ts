@@ -83,7 +83,7 @@ export class JSONCompletion {
   private parser: DocumentParser;
 
   // For enum cases to show description per enum we might want to handle cache description here during the completion process
-  public constantDescriptions: Map<string, string> = new Map();
+  private constantDescriptions: Map<string, string> = new Map();
 
   // private lastKnownValidData: object | null = null;
 
@@ -100,6 +100,29 @@ export class JSONCompletion {
         expandSchemaProperty(schemaFromState, schemaFromState) ??
         schemaFromState;
       this.laxSchema = makeSchemaLax(this.schema);
+
+      this.constantDescriptions.clear();
+
+      this.schema.allOf?.forEach((subSchema) => {
+        if (typeof subSchema === 'boolean') return;
+
+        if (
+          typeof subSchema.if === "object" &&
+          subSchema.if != null &&
+          subSchema.if?.properties != null
+        ) {
+          const propertyEntries = Object.values(subSchema.if.properties);
+
+          for (const value of propertyEntries) {
+            if (typeof value === "object" && value.const && value.description) {
+              this.constantDescriptions.set(
+                value.const.toString(),
+                value.description,
+              );
+            }
+          }
+        }
+      });
     }
     if (!this.schema || !this.laxSchema) {
       // todo: should we even do anything without schema
@@ -821,7 +844,9 @@ export class JSONCompletion {
         const appliedValue = this.getAppliedValue(enm);
         collector.add({
           type: schema.type?.toString(),
-          info: this.constantDescriptions.get(appliedValue.label) ?? schema.description,
+          info:
+            this.constantDescriptions.get(appliedValue.label) ??
+            schema.description,
           ...appliedValue,
         });
       }
@@ -883,7 +908,6 @@ export class JSONCompletion {
 
       // when adding a new property, we just wanna return the possible properties if possible
       const effectiveSchemaOfPointer = getEffectiveObjectWithPropertiesSchema(
-        this,
         rootSchema,
         documentData,
         pointer,
@@ -899,7 +923,6 @@ export class JSONCompletion {
 
     // Pass parsed data to getSchema to get the correct schema based on the data context (e.g. for anyOf or if-then)
     const effectiveSchemaOfParent = getEffectiveObjectWithPropertiesSchema(
-      this,
       rootSchema,
       documentData,
       parentPointer,
@@ -1063,7 +1086,6 @@ function makeSchemaLax(schema: any): any {
  * @param pointer
  */
 function getEffectiveObjectWithPropertiesSchema(
-  jsonCompletionInstance: JSONCompletion,
   schema: JSONSchema7,
   data: unknown,
   pointer: string | undefined,
@@ -1079,7 +1101,6 @@ function getEffectiveObjectWithPropertiesSchema(
   }
 
   const possibleDirectPropertyNames = getAllPossibleDirectStaticPropertyNames(
-    jsonCompletionInstance,
     draft,
     subSchema as JSONSchema7,
   );
@@ -1126,7 +1147,6 @@ function getEffectiveObjectWithPropertiesSchema(
  * @param schema
  */
 function getAllPossibleDirectStaticPropertyNames(
-  jsonCompletionInstance: JSONCompletion,
   rootDraft: Draft07,
   schema: JSONSchema7,
 ): string[] {
@@ -1139,18 +1159,8 @@ function getAllPossibleDirectStaticPropertyNames(
 
   function addFrom(subSchema: JSONSchema7) {
     const possiblePropertyNamesOfSubSchema =
-      getAllPossibleDirectStaticPropertyNames(jsonCompletionInstance, rootDraft, subSchema);
+      getAllPossibleDirectStaticPropertyNames(rootDraft, subSchema);
     possiblePropertyNames.push(...possiblePropertyNamesOfSubSchema);
-  }
-
-  if (typeof schema.if === "object" && schema.if != null && schema.if?.properties != null) {
-    const propertyEntries = Object.values(schema.if.properties);
-
-    for (const value of propertyEntries) {
-      if (typeof value === "object" && value.const && value.description) {
-        jsonCompletionInstance.constantDescriptions.set(value.const.toString(), value.description);
-      }
-    }
   }
 
   if (typeof schema.properties === "object" && schema.properties != null) {

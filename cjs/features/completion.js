@@ -68,13 +68,29 @@ class JSONCompletion {
         this.parser = (_c = (_b = this.opts) === null || _b === void 0 ? void 0 : _b.jsonParser) !== null && _c !== void 0 ? _c : (0, parsers_1.getDefaultParser)(this.mode);
     }
     doComplete(ctx) {
-        var _a;
+        var _a, _b;
         const schemaFromState = (0, state_1.getJSONSchema)(ctx.state);
         if (this.originalSchema !== schemaFromState) {
             // only process schema when it changed (could be huge)
             this.schema =
                 (_a = expandSchemaProperty(schemaFromState, schemaFromState)) !== null && _a !== void 0 ? _a : schemaFromState;
             this.laxSchema = makeSchemaLax(this.schema);
+            this.constantDescriptions.clear();
+            (_b = this.schema.allOf) === null || _b === void 0 ? void 0 : _b.forEach((subSchema) => {
+                var _a;
+                if (typeof subSchema === 'boolean')
+                    return;
+                if (typeof subSchema.if === "object" &&
+                    subSchema.if != null &&
+                    ((_a = subSchema.if) === null || _a === void 0 ? void 0 : _a.properties) != null) {
+                    const propertyEntries = Object.values(subSchema.if.properties);
+                    for (const value of propertyEntries) {
+                        if (typeof value === "object" && value.const && value.description) {
+                            this.constantDescriptions.set(value.const.toString(), value.description);
+                        }
+                    }
+                }
+            });
         }
         if (!this.schema || !this.laxSchema) {
             // todo: should we even do anything without schema
@@ -605,7 +621,7 @@ class JSONCompletion {
             // the property name is empty but json-schema-library would puke itself with a trailing slash, so we shouldn't even call it with that
             pointer = pointer.substring(0, pointer.length - 1);
             // when adding a new property, we just wanna return the possible properties if possible
-            const effectiveSchemaOfPointer = getEffectiveObjectWithPropertiesSchema(this, rootSchema, documentData, pointer);
+            const effectiveSchemaOfPointer = getEffectiveObjectWithPropertiesSchema(rootSchema, documentData, pointer);
             if (effectiveSchemaOfPointer != null) {
                 return [effectiveSchemaOfPointer];
             }
@@ -614,7 +630,7 @@ class JSONCompletion {
         if (parentPointer === "")
             parentPointer = undefined;
         // Pass parsed data to getSchema to get the correct schema based on the data context (e.g. for anyOf or if-then)
-        const effectiveSchemaOfParent = getEffectiveObjectWithPropertiesSchema(this, rootSchema, documentData, parentPointer);
+        const effectiveSchemaOfParent = getEffectiveObjectWithPropertiesSchema(rootSchema, documentData, parentPointer);
         const deepestPropertyKey = pointer === null || pointer === void 0 ? void 0 : pointer.split("/").pop();
         const pointerPointsToKnownProperty = deepestPropertyKey == null ||
             deepestPropertyKey in ((_a = effectiveSchemaOfParent === null || effectiveSchemaOfParent === void 0 ? void 0 : effectiveSchemaOfParent.properties) !== null && _a !== void 0 ? _a : {});
@@ -750,7 +766,7 @@ function makeSchemaLax(schema) {
  * @param data
  * @param pointer
  */
-function getEffectiveObjectWithPropertiesSchema(jsonCompletionInstance, schema, data, pointer) {
+function getEffectiveObjectWithPropertiesSchema(schema, data, pointer) {
     // TODO (unimportant): [performance] cache Draft07 in case it does some pre-processing? but does not seem to be significant
     const draft = new json_schema_library_1.Draft07(schema);
     const subSchema = draft.getSchema({
@@ -760,7 +776,7 @@ function getEffectiveObjectWithPropertiesSchema(jsonCompletionInstance, schema, 
     if (!isRealSchema(subSchema)) {
         return undefined;
     }
-    const possibleDirectPropertyNames = getAllPossibleDirectStaticPropertyNames(jsonCompletionInstance, draft, subSchema);
+    const possibleDirectPropertyNames = getAllPossibleDirectStaticPropertyNames(draft, subSchema);
     const effectiveProperties = {};
     for (let possibleDirectPropertyName of possibleDirectPropertyNames) {
         let propertyPointer = extendJsonPointer(pointer, possibleDirectPropertyName);
@@ -791,24 +807,15 @@ function getEffectiveObjectWithPropertiesSchema(jsonCompletionInstance, schema, 
  * @param rootDraft
  * @param schema
  */
-function getAllPossibleDirectStaticPropertyNames(jsonCompletionInstance, rootDraft, schema) {
-    var _a;
+function getAllPossibleDirectStaticPropertyNames(rootDraft, schema) {
     schema = expandSchemaProperty(schema, rootDraft.rootSchema);
     if (typeof schema !== "object" || schema == null) {
         return [];
     }
     const possiblePropertyNames = [];
     function addFrom(subSchema) {
-        const possiblePropertyNamesOfSubSchema = getAllPossibleDirectStaticPropertyNames(jsonCompletionInstance, rootDraft, subSchema);
+        const possiblePropertyNamesOfSubSchema = getAllPossibleDirectStaticPropertyNames(rootDraft, subSchema);
         possiblePropertyNames.push(...possiblePropertyNamesOfSubSchema);
-    }
-    if (typeof schema.if === "object" && schema.if != null && ((_a = schema.if) === null || _a === void 0 ? void 0 : _a.properties) != null) {
-        const propertyEntries = Object.values(schema.if.properties);
-        for (const value of propertyEntries) {
-            if (typeof value === "object" && value.const && value.description) {
-                jsonCompletionInstance.constantDescriptions.set(value.const.toString(), value.description);
-            }
-        }
     }
     if (typeof schema.properties === "object" && schema.properties != null) {
         possiblePropertyNames.push(...Object.keys(schema.properties));
