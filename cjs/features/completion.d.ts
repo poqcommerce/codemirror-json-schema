@@ -19,6 +19,7 @@ export declare class JSONCompletion {
     private laxSchema;
     private mode;
     private parser;
+    constantDescriptions: Map<string, string>;
     constructor(opts: JSONCompletionOptions);
     doComplete(ctx: CompletionContext): never[] | CompletionResult;
     private doCompleteForSchema;
