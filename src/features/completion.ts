@@ -82,6 +82,9 @@ export class JSONCompletion {
   private mode: JSONMode = MODES.JSON;
   private parser: DocumentParser;
 
+  // For enum cases to show description per enum we might want to handle cache description here during the completion process
+  public constantDescriptions: Map<string, string> = new Map();
+
   // private lastKnownValidData: object | null = null;
 
   constructor(private opts: JSONCompletionOptions) {
@@ -814,10 +817,12 @@ export class JSONCompletion {
     if (Array.isArray(schema.enum)) {
       for (let i = 0, length = schema.enum.length; i < length; i++) {
         const enm = schema.enum[i];
+
+        const appliedValue = this.getAppliedValue(enm);
         collector.add({
           type: schema.type?.toString(),
-          ...this.getAppliedValue(enm),
-          info: schema.description,
+          info: this.constantDescriptions.get(appliedValue.label) ?? schema.description,
+          ...appliedValue,
         });
       }
     }
@@ -878,6 +883,7 @@ export class JSONCompletion {
 
       // when adding a new property, we just wanna return the possible properties if possible
       const effectiveSchemaOfPointer = getEffectiveObjectWithPropertiesSchema(
+        this,
         rootSchema,
         documentData,
         pointer,
@@ -893,6 +899,7 @@ export class JSONCompletion {
 
     // Pass parsed data to getSchema to get the correct schema based on the data context (e.g. for anyOf or if-then)
     const effectiveSchemaOfParent = getEffectiveObjectWithPropertiesSchema(
+      this,
       rootSchema,
       documentData,
       parentPointer,
@@ -1056,6 +1063,7 @@ function makeSchemaLax(schema: any): any {
  * @param pointer
  */
 function getEffectiveObjectWithPropertiesSchema(
+  jsonCompletionInstance: JSONCompletion,
   schema: JSONSchema7,
   data: unknown,
   pointer: string | undefined,
@@ -1071,6 +1079,7 @@ function getEffectiveObjectWithPropertiesSchema(
   }
 
   const possibleDirectPropertyNames = getAllPossibleDirectStaticPropertyNames(
+    jsonCompletionInstance,
     draft,
     subSchema as JSONSchema7,
   );
@@ -1117,6 +1126,7 @@ function getEffectiveObjectWithPropertiesSchema(
  * @param schema
  */
 function getAllPossibleDirectStaticPropertyNames(
+  jsonCompletionInstance: JSONCompletion,
   rootDraft: Draft07,
   schema: JSONSchema7,
 ): string[] {
@@ -1129,8 +1139,18 @@ function getAllPossibleDirectStaticPropertyNames(
 
   function addFrom(subSchema: JSONSchema7) {
     const possiblePropertyNamesOfSubSchema =
-      getAllPossibleDirectStaticPropertyNames(rootDraft, subSchema);
+      getAllPossibleDirectStaticPropertyNames(jsonCompletionInstance, rootDraft, subSchema);
     possiblePropertyNames.push(...possiblePropertyNamesOfSubSchema);
+  }
+
+  if (typeof schema.if === "object" && schema.if != null && schema.if?.properties != null) {
+    const propertyEntries = Object.values(schema.if.properties);
+
+    for (const value of propertyEntries) {
+      if (typeof value === "object" && value.const && value.description) {
+        jsonCompletionInstance.constantDescriptions.set(value.const.toString(), value.description);
+      }
+    }
   }
 
   if (typeof schema.properties === "object" && schema.properties != null) {
